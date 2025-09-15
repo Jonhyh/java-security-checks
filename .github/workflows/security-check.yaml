@@ -6,21 +6,18 @@ on:
   pull_request:
     branches: [ main ]
 
-permissions:
-  contents: read
-
 jobs:
   security:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4   # v3 → v4
 
       - name: Set up JDK 11
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v4 # v3 → v4
         with:
-          distribution: temurin
+          distribution: temurin     # 'adopt' → 'temurin' (AdoptOpenJDK is deprecated)
           java-version: '11'
 
       - name: Install unzip
@@ -28,35 +25,22 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y unzip
 
-      - name: Run OWASP Dependency-Check
+      - name: Run Security Scan
         run: |
           mkdir -p report
           curl -sSLo dc.zip https://github.com/jeremylong/DependencyCheck/releases/download/v12.1.0/dependency-check-12.1.0-release.zip
           unzip -q dc.zip
           chmod +x dependency-check/bin/dependency-check.sh
-          # Run scan with NVD API key if available
-          if [ -n "${{ secrets.NVD_API_KEY }}" ]; then
-            ./dependency-check/bin/dependency-check.sh \
-              --project "JavaSecurityCheck" \
-              --scan . \
-              --format HTML \
-              --out report \
-              --disableAssembly \
-              --nvdApiKey "${{ secrets.NVD_API_KEY }}"
-          else
-            echo "⚠️ No NVD_API_KEY secret configured — scan may fail or have incomplete data."
-            ./dependency-check/bin/dependency-check.sh \
-              --project "JavaSecurityCheck" \
-              --scan . \
-              --format HTML \
-              --out report \
-              --disableAssembly
-          fi
-          ls -la report
+          ./dependency-check/bin/dependency-check.sh \
+            --project JavaSecurityCheck \
+            --scan ./ \
+            --format HTML \
+            --out report \
+            --disableAssembly
 
       - name: Upload Report
         uses: actions/upload-artifact@v4
         with:
           name: security-report
-          path: report/**
+          path: report/**             # ensure files inside folder are uploaded
           if-no-files-found: error
