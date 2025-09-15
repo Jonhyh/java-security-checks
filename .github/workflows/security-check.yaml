@@ -23,7 +23,7 @@ jobs:
           distribution: temurin
           java-version: '11'
 
-      - name: Install unzip (if needed)
+      - name: Install unzip
         run: |
           sudo apt-get update
           sudo apt-get install -y unzip
@@ -31,15 +31,27 @@ jobs:
       - name: Run OWASP Dependency-Check
         run: |
           mkdir -p report
-          curl -sSLo dc.zip https://github.com/jeremylong/DependencyCheck/releases/download/v6.5.3/dependency-check-6.5.3-release.zip
+          curl -sSLo dc.zip https://github.com/jeremylong/DependencyCheck/releases/download/v12.1.0/dependency-check-12.1.0-release.zip
           unzip -q dc.zip
           chmod +x dependency-check/bin/dependency-check.sh
-          ./dependency-check/bin/dependency-check.sh \
-            --project "JavaSecurityCheck" \
-            --scan . \
-            --format HTML \
-            --out report \
-            --disableAssembly
+          # Run scan with NVD API key if available
+          if [ -n "${{ secrets.NVD_API_KEY }}" ]; then
+            ./dependency-check/bin/dependency-check.sh \
+              --project "JavaSecurityCheck" \
+              --scan . \
+              --format HTML \
+              --out report \
+              --disableAssembly \
+              --nvdApiKey "${{ secrets.NVD_API_KEY }}"
+          else
+            echo "⚠️ No NVD_API_KEY secret configured — scan may fail or have incomplete data."
+            ./dependency-check/bin/dependency-check.sh \
+              --project "JavaSecurityCheck" \
+              --scan . \
+              --format HTML \
+              --out report \
+              --disableAssembly
+          fi
           ls -la report
 
       - name: Upload Report
